@@ -1,4 +1,4 @@
-            import tkinter as tk
+import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import sqlite3
 from datetime import datetime, timedelta
@@ -6,6 +6,7 @@ import os
 import shutil
 import threading
 from datetime import date
+from flet import ,
 
 class TailorApp:
     def __init__(self):
@@ -123,368 +124,27 @@ class TailorApp:
         
         reminders = c.fetchall()
         if reminders:
-            reminder_text = "🚨 تذكيرات غد:
-"
-            for name, cloth, date in reminders[:5]:  # أول 5 فقط
-                reminder_text += f"• {name}: {cloth}
-"
-            if len(reminders) > 5:
+            reminder_text = "🚨تذكيرات غد" 
+            
+        for name, cloth, date in reminders[:5]:  # أول 5 فقط
+             reminder_text += f"• {name}: {cloth}"
+
+        if len(reminders) > 5:
                 reminder_text += f"• و{len(reminders)-5} طلب آخر..."
             
-            messagebox.showwarning("تذكيرات التسليم", reminder_text)
+messagebox.showwarning("تذكيرات التسليم", reminder_text)
         
         # إعادة الفحص بعد 30 دقيقة
-        self.root.after(1800000, self.check_reminders)
+
+self.root.after(1800000, 
+        self.check_reminders)
 
     # باقي الدوال الأساسية (كما هي مع التحسينات)...
-    # [سأختصر هنا للمساحة - الكود الكامل متاح أدناه]
-
-    def create_backup(self):
-        """✅ جديد: إنشاء نسخة احتياطية"""
-        try:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            backup_filename = f"tailor_backup_{timestamp}.db"
-            backup_path = filedialog.asksaveasfilename(
-                initialname=backup_filename,
-                defaultextension=".db",
-                filetypes=[("Database files", "*.db"), ("All files", "*.*")]
-            )
-            
-            if backup_path:
-                shutil.copy2('tailor.db', backup_path)
-                
-                # حفظ سجل النسخة
-                c = self.conn.cursor()
-                size = os.path.getsize(backup_path)
-                c.execute("INSERT INTO backups (filename, size_bytes) VALUES (?, ?)", 
-                         (backup_path, size))
-                self.conn.commit()
-                
-                messagebox.showinfo("نجاح", f"تم إنشاء نسخة احتياطية:
-{backup_path}
-الحجم: {size/1024:.1f} KB")
-        except Exception as e:
-            messagebox.showerror("خطأ", f"فشل إنشاء النسخة:
-{str(e)}")
-
-    def restore_backup(self):
-        """✅ جديد: استعادة نسخة احتياطية"""
-        backup_file = filedialog.askopenfilename(
-            filetypes=[("Database files", "*.db")]
-        )
-        if backup_file and messagebox.askyesno("تأكيد", "هل أنت متأكد؟ سيتم استبدال البيانات الحالية!"):
-            try:
-                shutil.copy2(backup_file, 'tailor.db')
-                messagebox.showinfo("نجاح", "تم استعادة النسخة بنجاح!
-يرجى إعادة تشغيل البرنامج.")
-                self.root.quit()
-            except Exception as e:
-                messagebox.showerror("خطأ", f"فشل الاستعادة:
-{str(e)}")
-
-    def advanced_search_orders(self, tree):
-        """✅ جديد: بحث متقدم في الطلبات"""
-        search_window = tk.Toplevel(self.root)
-        search_window.title("بحث متقدم")
-        search_window.geometry("500x400")
-        search_window.configure(bg='#f9f9f9')
-
-        # حقول البحث
-        search_frame = tk.LabelFrame(search_window, text="معايير البحث", font=('Arial', 12))
-        search_frame.pack(padx=20, pady=20, fill='x')
-
-        tk.Label(search_frame, text="اسم العميل:", font=('Arial', 11)).grid(row=0, column=0, padx=10, pady=10, sticky='e')
-        customer_search = tk.Entry(search_frame, font=('Arial', 11), width=25)
-        customer_search.grid(row=0, column=1, padx=10, pady=10)
-
-        tk.Label(search_frame, text="نوع الثوب:", font=('Arial', 11)).grid(row=1, column=0, padx=10, pady=10, sticky='e')
-        cloth_search = tk.Entry(search_frame, font=('Arial', 11), width=25)
-        cloth_search.grid(row=1, column=1, padx=10, pady=10)
-
-        tk.Label(search_frame, text="الحالة:", font=('Arial', 11)).grid(row=2, column=0, padx=10, pady=10, sticky='e')
-        status_combo = ttk.Combobox(search_frame, font=('Arial', 11), width=23,
-                                   values=['📝 تسجيل الطلب', '✂️ القص', '🧵 الخياطة', 
-                                          '🔥 الكي', '🎁 جاهز للتسليم'])
-        status_combo.grid(row=2, column=1, padx=10, pady=10)
-
-        tk.Label(search_frame, text="المتبقي >:", font=('Arial', 11)).grid(row=3, column=0, padx=10, pady=10, sticky='e')
-        remaining_search = tk.Entry(search_frame, font=('Arial', 11), width=25)
-        remaining_search.grid(row=3, column=1, padx=10, pady=10)
-
-        def perform_search():
-            conditions = []
-            params = []
-            
-            if customer_search.get().strip():
-                conditions.append("cu.name LIKE ?")
-                params.append(f"%{customer_search.get().strip()}%")
-            
-            if cloth_search.get().strip():
-                conditions.append("o.cloth_type LIKE ?")
-                params.append(f"%{cloth_search.get().strip()}%")
-            
-            if status_combo.get():
-                conditions.append("o.status = ?")
-                params.append(status_combo.get())
-            
-            if remaining_search.get().strip():
-                try:
-                    min_remaining = float(remaining_search.get())
-                    conditions.append("o.remaining_amount >= ?")
-                    params.append(min_remaining)
-                except:
-                    pass
-            
-            where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
-            
-            c = self.conn.cursor()
-            c.execute(f"""
-                SELECT o.id, cu.name, o.cloth_type, o.quantity, o.status, 
-                       o.delivery_date, e.name, o.remaining_amount
-                FROM orders o
-                JOIN customers cu ON o.customer_id = cu.id
-                LEFT JOIN employees e ON o.tailor_id = e.id
-                {where_clause}
-                ORDER BY o.id DESC
-            """, params)
-            
-            # مسح الجدول وإعادة التعبئة
-            for item in tree.get_children():
-                tree.delete(item)
-            
-            for row in c.fetchall():
-                tree.insert('', tk.END, values=row)
-            
-            search_window.destroy()
-            messagebox.showinfo("البحث", f"تم العثور على {len(c.fetchall())} نتيجة")
-
-        tk.Button(search_frame, text="🔍 بحث", font=('Arial', 12, 'bold'), 
-                 bg='#2196F3', fg='white', command=perform_search).grid(
-                 row=4, column=0, columnspan=2, pady=20)
-
-    def show_dashboard(self):
-        """لوحة التحكم المُحسّنة مع أزرار جديدة"""
-        for w in self.root.winfo_children():
-            w.destroy()
-
-        # العنوان مع التاريخ
-        today = datetime.now().strftime('%Y/%m/%d - %A')
-        title = tk.Label(self.root, text=f"🏠 لوحة التحكم — {self.current_role} | {today}",
-                        font=('Arial', 18, 'bold'), bg='#f0f0f0')
-        title.pack(pady=20)
-
-        # أزرار سريعة في الأعلى
-        quick_actions = tk.Frame(self.root, bg='#f0f0f0')
-        quick_actions.pack(pady=10)
-        
-        tk.Button(quick_actions, text="💾 نسخ احتياطي", font=('Arial', 12, 'bold'), 
-                 bg='#FF9800', fg='white', width=15, command=self.create_backup).pack(side='right', padx=5)
-        tk.Button(quick_actions, text="📋 الطلبات المتأخرة", font=('Arial', 12, 'bold'), 
-                 bg='#f44336', fg='white', width=18, command=self.show_overdue_orders).pack(side='right', padx=5)
-
-        # الشريط الجانبي المُوسّع
-        nav_frame = tk.Frame(self.root, bg='#f8f8f8', relief='sunken', bd=2, width=220)
-        nav_frame.pack(padx=20, pady=20, fill='y', side='left')
-        nav_frame.pack_propagate(False)
-
-        buttons = [
-            ("➕ تسجيل طلب جديد", self.show_new_order),
-            ("📋 إدارة الطلبات", self.show_orders),
-            ("🔍 بحث متقدم", lambda: self.advanced_search_orders(self.get_current_tree())),  # يحتاج tree
-        ]
-
-        if self.current_role == 'مدير':
-            buttons.extend([
-                ("👥 إدارة الموظفين", self.manage_employees),
-                ("💱 استعادة نسخة", self.restore_backup)
-            ])
-
-        if self.current_role in ['مدير', 'محاسب']:
-            buttons.extend([
-                ("👤 قائمة الزبائن", self.show_customers_list),
-                ("🖨️ طباعة PDF", self.print_customers_pdf)
-            ])
-
-        buttons.append(("📊 التقارير", self.show_reports))
-
-        for text, cmd in buttons:
-            btn = tk.Button(nav_frame, text=text, font=('Arial', 11, 'bold'), bg='#2196F3', 
-                           fg='white', width=22, anchor='w', command=cmd)
-            btn.pack(pady=8, padx=8, ipady=8, fill='x')
-
-        # أزرار الخروج
-        exit_frame = tk.Frame(self.root, bg='#f0f0f0')
-        exit_frame.pack(side='bottom', pady=20)
-        tk.Button(exit_frame, text="🚪 خروج", font=('Arial', 14, 'bold'), 
-                 bg='#f44336', fg='white', width=15, command=self.logout).pack(pady=10)
-
-    def show_overdue_orders(self):
-        """✅ جديد: عرض الطلبات المتأخرة"""
-        overdue_window = tk.Toplevel(self.root)
-        overdue_window.title("الطلبات المتأخرة")
-        overdue_window.geometry("900x600")
-
-        cols = ('ر.م', 'العميل', 'الثوب', 'موعد التسليم', 'المتبقي', 'الحالة')
-        tree = ttk.Treeview(overdue_window, columns=cols, show='headings', height=20)
-        
-        for col in cols:
-            tree.heading(col, text=col)
-            tree.column(col, width=140, anchor='center')
-
-        c = self.conn.cursor()
-        overdue_date = (date.today() - timedelta(days=1)).strftime('%Y-%m-%d')
-        c.execute("""
-            SELECT o.id, cu.name, o.cloth_type, o.delivery_date, o.remaining_amount, o.status
-            FROM orders o JOIN customers cu ON o.customer_id = cu.id
-            WHERE o.delivery_date < ? AND o.status != '🎁 جاهز للتسليم'
-            ORDER BY o.delivery_date
-        """, (overdue_date,))
-
-        overdue_count = 0
-        for row in c.fetchall():
-            tree.insert('', tk.END, values=row)
-            overdue_count += 1
-
-        tree.pack(pady=20, padx=20, fill='both', expand=True)
-        
-        tk.Label(overdue_window, text=f"عدد الطلبات المتأخرة: {overdue_count}", 
-                font=('Arial', 14, 'bold'), bg='orange').pack(pady=10)
-
-    # ... باقي الدوال كما هي مع التحسينات السابقة
-
-    def run(self):
-        self.root.mainloop()
-
-# تشغيل
-if __name__ == "__main__":
-    app = TailorApp()
-    app.run()
+self.conn.commit()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
-import sqlite3
-from datetime import datetime
-import os
-
-class TailorApp:
-    def __init__(self):
-        self.root = tk.Tk()
-        self.root.title("نظام إدارة محل الخياطة")
-        self.root.geometry("1000x700")
-        self.root.configure(bg='#f0f0f0')
-        
-        # دعم RTL كامل للعربية
-        self.root.option_add('*font', 'Arial 12')
-        
-        # الاتصال بقاعدة البيانات
-        self.conn = sqlite3.connect('tailor.db')
-        self.current_user = None
-        self.current_role = None
-        self.entries = {}  # ✅ إصلاح: نقل إلى __init__
-        self.setup_database()
-        self.show_login()
-        
-        # ✅ إضافة: إغلاق آمن
-        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-    
-    def on_closing(self):
-        """إغلاق آمن لقاعدة البيانات"""
-        if hasattr(self, 'conn') and self.conn:
-            self.conn.commit()
-            self.conn.close()
-        self.root.destroy()
-    
-    def setup_database(self):
-        """إنشاء الجداول مع دعم الخياطين والموظفين"""
-        c = self.conn.cursor()
-
-        # المستخدمون
-        c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL CHECK(role IN ('مدير', 'محاسب', 'خياط', 'موظف'))
-        )
-        ''')
-
-        # العملاء
-        c.execute('''
-        CREATE TABLE IF NOT EXISTS customers (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            phone TEXT,
-            total_amount REAL DEFAULT 0.0,
-            paid_amount REAL DEFAULT 0.0,
-            remaining_amount REAL DEFAULT 0.0
-        )
-        ''')
-
-        # الموظفون/الخياطون
-        c.execute('''
-        CREATE TABLE IF NOT EXISTS employees (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            role TEXT NOT NULL CHECK(role IN ('خياط', 'موظف'))
-        )
-        ''')
-
-        # الطلبات + Tailor ID
-        c.execute('''
-        CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            customer_id INTEGER,
-            tailor_id INTEGER,
-            measurements TEXT,
-            fabric_type TEXT,
-            cloth_type TEXT,
-            quantity INTEGER DEFAULT 1,
-            delivery_date DATE,
-            total_amount REAL DEFAULT 0.0,
-            paid_amount REAL DEFAULT 0.0,
-            remaining_amount REAL DEFAULT 0.0,
-            status TEXT DEFAULT '📝 تسجيل الطلب',
-            current_employee TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (customer_id) REFERENCES customers (id),
-            FOREIGN KEY (tailor_id)  REFERENCES employees (id)
-        )
-        ''')
-
-        # مستخدمين افتراضيين
-        c.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)", 
-                  ('admin', '123456', 'مدير'))
-        c.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)", 
-                  ('accountant', '123456', 'محاسب'))
-        c.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)", 
-                  ('tailor', '123456', 'خياط'))
-        c.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)", 
-                  ('employee', '123456', 'موظف'))
-
-        # خياطين افتراضيين
-        c.execute("INSERT OR IGNORE INTO employees (name, role) VALUES (?, ?)", ('خياط أحمد', 'خياط'))
-        c.execute("INSERT OR IGNORE INTO employees (name, role) VALUES (?, ?)", ('خياط محمد', 'خياط'))
-
-        self.conn.commit()
-
-    def show_login(self):
-        """شاشة تسجيل الدخول مع RTL عربي"""
+     def show_login(self):
+        """شاشة تسجيل الدخول مع RTL  عربي"""
         for w in self.root.winfo_children():
             w.destroy()
 
@@ -932,7 +592,198 @@ class TailorApp:
         self.conn.commit()
 
         messagebox.showinfo("نجاح", "تم حذف الطلب")
-        self.show_orders()
+        
+    
+    # [سأختصر هنا للمساحة - الكود الكامل متاح أدناه]
+
+    def create_backup(self):
+        """✅ جديد: إنشاء نسخة احتياطية"""
+        try:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_filename = f"tailor_backup_{timestamp}.db"
+            backup_path = filedialog.asksaveasfilename(
+                initialname=backup_filename,
+                defaultextension=".db",
+                filetypes=[("Database files", "*.db"), ("All files", "*.*")]
+            )
+            
+            if backup_path:
+                shutil.copy2('tailor.db', backup_path)
+                
+                # حفظ سجل النسخة
+                c = self.conn.cursor()
+                size = os.path.getsize(backup_path)
+                c.execute("INSERT INTO backups (filename, size_bytes) VALUES (?, ?)", 
+                         (backup_path, size))
+                self.conn.commit()
+                
+                messagebox.showinfo("نجاح", f"تم إنشاء نسخة احتياطية:
+{backup_path}
+الحجم: {size/1024:.1f} KB")
+        except Exception as e:
+            messagebox.showerror("خطأ", f"فشل إنشاء النسخة:
+{str(e)}")
+
+    def restore_backup(self):
+        """✅ جديد: استعادة نسخة احتياطية"""
+        backup_file = filedialog.askopenfilename(
+            filetypes=[("Database files", "*.db")]
+        )
+        if backup_file and messagebox.askyesno("تأكيد", "هل أنت متأكد؟ سيتم استبدال البيانات الحالية!"):
+            try:
+                shutil.copy2(backup_file, 'tailor.db')
+                messagebox.showinfo("نجاح", "تم استعادة النسخة بنجاح!
+يرجى إعادة تشغيل البرنامج.")
+                self.root.quit()
+            except Exception as e:
+                messagebox.showerror("خطأ", f"فشل الاستعادة:
+{str(e)}")
+
+    def advanced_search_orders(self, tree):
+        """✅ جديد: بحث متقدم في الطلبات"""
+        search_window = tk.Toplevel(self.root)
+        search_window.title("بحث متقدم")
+        search_window.geometry("500x400")
+        search_window.configure(bg='#f9f9f9')
+
+        # حقول البحث
+        search_frame = tk.LabelFrame(search_window, text="معايير البحث", font=('Arial', 12))
+        search_frame.pack(padx=20, pady=20, fill='x')
+
+        tk.Label(search_frame, text="اسم العميل:", font=('Arial', 11)).grid(row=0, column=0, padx=10, pady=10, sticky='e')
+        customer_search = tk.Entry(search_frame, font=('Arial', 11), width=25)
+        customer_search.grid(row=0, column=1, padx=10, pady=10)
+
+        tk.Label(search_frame, text="نوع الثوب:", font=('Arial', 11)).grid(row=1, column=0, padx=10, pady=10, sticky='e')
+        cloth_search = tk.Entry(search_frame, font=('Arial', 11), width=25)
+        cloth_search.grid(row=1, column=1, padx=10, pady=10)
+
+        tk.Label(search_frame, text="الحالة:", font=('Arial', 11)).grid(row=2, column=0, padx=10, pady=10, sticky='e')
+        status_combo = ttk.Combobox(search_frame, font=('Arial', 11), width=23,
+                                   values=['📝 تسجيل الطلب', '✂️ القص', '🧵 الخياطة', 
+                                          '🔥 الكي', '🎁 جاهز للتسليم'])
+        status_combo.grid(row=2, column=1, padx=10, pady=10)
+
+        tk.Label(search_frame, text="المتبقي >:", font=('Arial', 11)).grid(row=3, column=0, padx=10, pady=10, sticky='e')
+        remaining_search = tk.Entry(search_frame, font=('Arial', 11), width=25)
+        remaining_search.grid(row=3, column=1, padx=10, pady=10)
+
+        def perform_search():
+            conditions = []
+            params = []
+            
+            if customer_search.get().strip():
+                conditions.append("cu.name LIKE ?")
+                params.append(f"%{customer_search.get().strip()}%")
+            
+            if cloth_search.get().strip():
+                conditions.append("o.cloth_type LIKE ?")
+                params.append(f"%{cloth_search.get().strip()}%")
+            
+            if status_combo.get():
+                conditions.append("o.status = ?")
+                params.append(status_combo.get())
+            
+            if remaining_search.get().strip():
+                try:
+                    min_remaining = float(remaining_search.get())
+                    conditions.append("o.remaining_amount >= ?")
+                    params.append(min_remaining)
+                except:
+                    pass
+            
+            where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
+            
+            c = self.conn.cursor()
+            c.execute(f"""
+                SELECT o.id, cu.name, o.cloth_type, o.quantity, o.status, 
+                       o.delivery_date, e.name, o.remaining_amount
+                FROM orders o
+                JOIN customers cu ON o.customer_id = cu.id
+                LEFT JOIN employees e ON o.tailor_id = e.id
+                {where_clause}
+                ORDER BY o.id DESC
+            """, params)
+            
+            # مسح الجدول وإعادة التعبئة
+            for item in tree.get_children():
+                tree.delete(item)
+            
+            for row in c.fetchall():
+                tree.insert('', tk.END, values=row)
+            
+            search_window.destroy()
+            messagebox.showinfo("البحث", f"تم العثور على {len(c.fetchall())} نتيجة")
+
+        tk.Button(search_frame, text="🔍 بحث", font=('Arial', 12, 'bold'), 
+                 bg='#2196F3', fg='white', command=perform_search).grid(
+                 row=4, column=0, columnspan=2, pady=20)
+
+    def show_dashboard(self):
+        """لوحة التحكم المُحسّنة مع أزرار جديدة"""
+        for w in self.root.winfo_children():
+            w.destroy()
+
+        # العنوان مع التاريخ
+        today = datetime.now().strftime('%Y/%m/%d - %A')
+        title = tk.Label(self.root, text=f"🏠 لوحة التحكم — {self.current_role} | {today}",
+                        font=('Arial', 18, 'bold'), bg='#f0f0f0')
+        title.pack(pady=20)
+
+        # أزرار سريعة في الأعلى
+        quick_actions = tk.Frame(self.root, bg='#f0f0f0')
+        quick_actions.pack(pady=10)
+        
+        tk.Button(quick_actions, text="💾 نسخ احتياطي", font=('Arial', 12, 'bold'), 
+                 bg='#FF9800', fg='white', width=15, command=self.create_backup).pack(side='right', padx=5)
+        tk.Button(quick_actions, text="📋 الطلبات المتأخرة", font=('Arial', 12, 'bold'), 
+                 bg='#f44336', fg='white', width=18, command=self.show_overdue_orders).pack(side='right', padx=5)
+
+        # الشريط الجانبي المُوسّع
+        nav_frame = tk.Frame(self.root, bg='#f8f8f8', relief='sunken', bd=2, width=220)
+        nav_frame.pack(padx=20, pady=20, fill='y', side='left')
+        nav_frame.pack_propagate(False)
+
+        buttons = [
+            ("➕ تسجيل طلب جديد", self.show_new_order),
+            ("📋 إدارة الطلبات", self.show_orders),
+            ("🔍 بحث متقدم", lambda: self.advanced_search_orders(self.get_current_tree())),  # يحتاج tree
+        ]
+
+        if self.current_role == 'مدير':
+            buttons.extend([
+                ("👥 إدارة الموظفين", self.manage_employees),
+                ("💱 استعادة نسخة", self.restore_backup)
+            ])
+
+        if self.current_role in ['مدير', 'محاسب']:
+            buttons.extend([
+                ("👤 قائمة الزبائن", self.show_customers_list),
+                ("🖨️ طباعة PDF", self.print_customers_pdf)
+            ])
+
+        buttons.append(("📊 التقارير", self.show_reports))
+
+        for text, cmd in buttons:
+            btn = tk.Button(nav_frame, text=text, font=('Arial', 11, 'bold'), bg='#2196F3', 
+                           fg='white', width=22, anchor='w', command=cmd)
+            btn.pack(pady=8, padx=8, ipady=8, fill='x')
+
+
+
+
+
+
+
+        # أزرار الخروج
+        exit_frame = tk.Frame(self.root, bg='#f0f0f0')
+        exit_frame.pack(side='bottom', pady=20)
+        tk.Button(exit_frame, text="🚪 خروج", font=('Arial', 14, 'bold'), 
+                 bg='#f44336', fg='white', width=15, command=self.logout).pack(pady=10)
+
+
+
+         self.show_orders()
 
     def show_customers_list(self):
         """عرض قائمة الزبائن مع المبالغ"""
@@ -957,7 +808,44 @@ class TailorApp:
 
         tree.pack(pady=20, padx=20, fill='both', expand=True)
 
-        # أزرار التنقل
+
+
+
+
+
+    def show_overdue_orders(self):
+        """✅ جديد: عرض الطلبات المتأخرة"""
+        overdue_window = tk.Toplevel(self.root)
+        overdue_window.title("الطلبات المتأخرة")
+        overdue_window.geometry("900x600")
+
+        cols = ('ر.م', 'العميل', 'الثوب', 'موعد التسليم', 'المتبقي', 'الحالة')
+        tree = ttk.Treeview(overdue_window, columns=cols, show='headings', height=20)
+        
+        for col in cols:
+            tree.heading(col, text=col)
+            tree.column(col, width=140, anchor='center')
+
+        c = self.conn.cursor()
+        overdue_date = (date.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+        c.execute("""
+            SELECT o.id, cu.name, o.cloth_type, o.delivery_date, o.remaining_amount, o.status
+            FROM orders o JOIN customers cu ON o.customer_id = cu.id
+            WHERE o.delivery_date < ? AND o.status != '🎁 جاهز للتسليم'
+            ORDER BY o.delivery_date
+        """, (overdue_date,))
+
+        overdue_count = 0
+        for row in c.fetchall():
+            tree.insert('', tk.END, values=row)
+            overdue_count += 1
+
+        tree.pack(pady=20, padx=20, fill='both', expand=True)
+        
+        tk.Label(overdue_window, text=f"عدد الطلبات المتأخرة: {overdue_count}", 
+                font=('Arial', 14, 'bold'), bg='orange').pack(pady=10)
+
+    # # أزرار التنقل
         nav = tk.Frame(self.root, bg='#f0f0f0')
         nav.pack(pady=20)
         tk.Button(nav, text="🏠 لوحة التحكم", font=('Arial', 12), bg='#2196F3', fg='white',
@@ -1134,5 +1022,12 @@ class TailorApp:
 # تشغيل التطبيق
 if __name__ == "__main__":
     app = TailorApp()
+    app.run()... باقي الدوال كما هي مع التحسينات السابقة
+
+    def run(self):
+        self.root.mainloop()
+
+# تشغيل
+if __name__ == "__main__":
+    app = TailorApp()
     app.run()
-                                
